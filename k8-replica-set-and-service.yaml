@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: ReplicaSet # Type replica set 
+metadata:
+  name: go-demo-2-api 
+spec:
+  replicas: 2 # The number of pods that should be up at any given time
+  selector: 
+    matchLabels: # The labels that distinguish the pods this replica set is responsible for (any pod with label type: backend and service: go-demo-2) 
+     type: api
+     service: go-demo-2
+  template: # The template used for creating the pod 
+    metadata:
+      labels: # Must have at least the same labels that are assigned to the replica set (type: backend, service: go-demo-2)
+        type: api
+        service: go-demo-2
+    spec:
+      containers:
+      - name: api
+        image: vfarcic/go-demo-2
+        livenessProbe:
+          httpGet:
+            path: /demo/hello
+            port: 8080
+
+--- 
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-demo-2-api
+spec:
+  type: NodePort
+  ports:
+  - port: 8080 # This defines the port that the request should be forwarded to (in out case the api is listening to port 8080)
+    targetPort: 8080 # The port used for other pods inside the same cluster to communicate with the pods associated to this service 
+    nodePort: 30001 # This tells the service to accept incoming traffic on port 30001 but forwarded it to the pods 8080, this is not advised just let k8 handle assigning port to the service, it's just included for demonstration
+    protocol: TCP # Default is TCP, allowed Values are UDP and TCP
+  selector: # Selectors used to define the pods that this service should route the traffic too (should match the pods labels)
+    type: api
+    service: go-demo-2
