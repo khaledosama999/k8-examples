@@ -14,6 +14,17 @@ The smallest building unit for k8, the yaml file for a basic pod would have the 
   
 - After the scheduler assigns the pod to a node the **kubelet** running on that node is also listening for events on the **API server**, it detects that a pod was assigned to it so it commands the docker daemon on it's node to create the specified containers...
 
+## Replica Set
+By default a **pod** doesn't have any fault tolerant behavior (if it's created without any **controllers**), so a replica set is one of the **controllers** that is responsible for making sure the right amount of pods are running in our cluster 
 
+### Assigning pods
+The replica set identifies the pods it's responsible for by using the **matchLabels** so if the replica set has `matchLabels` x:1 y:2 **any pod** with at least those 2 labels and same value will be considered as part of the replica set pod pool
+
+### Replica set creation
+- After running the command `kubectl create -f ./k8-replica-set.yaml` a request is sent to the **API server** and the **replica set controller** is watching for events on the API server and detects a replica set creation event occurred 
+
+- The replica set controller creates the same number of pods as specified in it's yaml file
+  
+- The scheduler detects new unassigned pod(s) so it assigns those pods to the available nodes and so on ...
 ## References 
 A big thanks for educative for their amazing [course](https://www.educative.io/path/kubernetes-essentials) for k8 

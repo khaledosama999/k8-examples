@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: ReplicaSet # Type replica set 
+metadata:
+  name: go-demo-2 
+spec:
+  replicas: 2 # The number of pods that should be up at any given time
+  selector: 
+    matchLabels: # The labels that distinguish the pods this replica set is responsible for (any pod with label type: backend and service: go-demo-2) 
+      type: backend
+      service: go-demo-2
+  template: # The template used for creating the pod 
+    metadata:
+      labels: # Must have at least the same labels that are assigned to the replica set (type: backend, service: go-demo-2)
+        type: backend
+        service: go-demo-2
+        db: mongo
+        language: go
+    spec:
+      containers:
+      - name: db
+        image: mongo:3.3
+      - name: api
+        image: vfarcic/go-demo-2
+        env:
+        - name: DB
+          value: localhost
+        livenessProbe:
+          httpGet:
+            path: /demo/hello
+            port: 8080
