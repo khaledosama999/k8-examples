@@ -71,5 +71,27 @@ Given that the service was created for a specific port (let's also say 2000) any
 
 #### Choosing the right pod
 Like we said a service can represent **many pods** (if we deploy the same pod using a replica set with value 3 for example) so the service forwards the request to **a random endpoint out of the 3** so it resembles something like round robin where each pod receives almost the same amount of requests 
+
+## Deployments
+### Motivation
+Since we can now know how to deploy **pods** and if they crash **Replica sets** are responsible for restarting and making sure the right count of pods are up, But what happens if we update the image (containers running inside our pods) for instance we might've added a new feature to our codebase or we are just upgrading the version used of our database. That means we have to take down **all our pods** (since they have the old image), delete the old replica-set and re-apply the replica set yaml file. But this is bound to have some down time which in some cases we can't afford. Here is where **Deployments** come into play they **roll back** the old pods one by one and in each step it rolls back a pod **a new pod** replaces it (so by the end the same number of pods is up) so there is zero down-time.
+
+### Deployment Creation
+- After Running the command `kubectl create -f ./k8-deployment.yaml` a request is sent to the **API server** to create a new deployment object which is considered as an event, which is listened to by the deployment controller which on receiving that event sends a command to the **API server** to create a replica set with the given spec in the yaml file, and the replica set creation flow starts..., this might not seem of a great value but deployments really shine when it comes to **updating our pods**
+
+### Deployment Update/Strategy 
+This is the action taken to **update** the state of an already deployed replica set (adding the new image to the pods), there are mainly two ways to do so 
+
+#### Recreate
+This is the non-common way, it commands k8 when to first **delete all the pods** of the old replica set **then** create a new replica set with the new pods, this obviously doesn't have any **zero down time**, the only case this is advised is when you are sure **two different versions** of your pod can't co-exist. then this is the advisable way to go
+
+#### RollingUpdate
+This is more common, as this allows k8 to take down the old replica set pod(s) by pod(s) and at the same time create the new desired replica set pod(s) by pod(s), depending on the configuration you define in the deployment yaml file, but for simplicity let's say we have a replica set with 3 pods and we want to deploy a new version, k8 would take 1 **old pod** down and create a **new one** then we would have two old pods and one new pod, and so on until we have 0 old pods and 3 new pods.
+
+### Common k8 Deployment commands
+Now that we know the life cycle of **Deployments** and it's use case here are some common commands
+
+- `kubectl rollout undo -f ./k8-deployment.yaml`: This will rollback the replica set to the **previous version** using the same deployment strategy defined in the yaml file, can be used in case we discovered a bug that might need some time to fix 
+
 ## References 
 A big thanks for educative for their amazing [course](https://www.educative.io/path/kubernetes-essentials) for k8.

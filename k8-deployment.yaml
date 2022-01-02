@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-demo-2-api
+  labels:
+    type: api
+    service: go-demo-2
+spec:
+  replicas: 3 # Same as the replica yaml file we define number of pods and match labels for the pods the replica set is responsible for
+  selector:
+    matchLabels:
+      type: api
+      service: go-demo-2
+  minReadySeconds: 1 # default 0, The minimum amount of seconds k8 wait until it can consider the pod healthy and can start testing the livenessProbe
+  progressDeadlineSeconds: 60 # The allowed number of seconds the process of deploying is allowed, if it exceeds it the deployment is considered as a failure
+  revisionHistoryLimit: 5 # default 10, The number of **old replicas** versions that k8 maintains so we can rollback to
+  strategy:
+    type: RollingUpdate # enum RollingUpdate and Recreate, default RollingUpdate, the strategy used to change the state of having all the pods running the old image(destroying theses pods) to all pods running the new image (creating these new pods)
+    rollingUpdate:
+      maxSurge: 1 # The maximum allowed number of pods that can exceed the replica size (in our case since it's 1 that means we are telling k8 we can have at any given time 4 pods: 3 replicas + 1 maxSurge), can also have a percentage as a value, k8 uses this to create new pods **first**, **then** destroy old pods 
+      maxUnavailable: 1 # The maximum number of pods that can be non-operational (in our case we are telling k8 only 1 pod is allowed to be non-operational at any given time), can also be a percentage
+  template:
+    metadata:
+      labels:
+        type: api
+        service: go-demo-2
+        language: go
+    spec:
+      containers:
+      - name: api
+        image: vfarcic/go-demo-2
+        env:
+        - name: DB
+          value: go-demo-2-db
+        readinessProbe:
+          httpGet:
+            path: /demo/hello
+            port: 8080
+          periodSeconds: 1
+        livenessProbe:
+          httpGet:
+            path: /demo/hello
+            port: 8080
+
+--- 
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-demo-2-api
+spec:
+  type: NodePort
+  ports:
+  - port: 8080 # This defines the port that the request should be forwarded to (in out case the api is listening to port 8080)
+    targetPort: 8080 # The port used for other pods inside the same cluster to communicate with the pods associated to this service 
+    nodePort: 30001 # This tells the service to accept incoming traffic on port 30001 but forwarded it to the pods 8080, this is not advised just let k8 handle assigning port to the service, it's just included for demonstration
+    protocol: TCP # Default is TCP, allowed Values are UDP and TCP
+  selector: # Selectors used to define the pods that this service should route the traffic too (should match the pods labels)
+    type: api
+    service: go-demo-2
