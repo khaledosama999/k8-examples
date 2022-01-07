@@ -93,5 +93,40 @@ Now that we know the life cycle of **Deployments** and it's use case here are so
 
 - `kubectl rollout undo -f ./k8-deployment.yaml`: This will rollback the replica set to the **previous version** using the same deployment strategy defined in the yaml file, can be used in case we discovered a bug that might need some time to fix 
 
+## Ingress
+
+### Motivation 
+Since we now know how to create **pods** that contain our apps in containers and **services** to expose those ports to the cluster and the outside world, we need to know how to **communicate** with those expose pods, we can use the IP address of any our nodes in the cluster and the **targetPort** specified in our service ("http://IP:PORT/hello") but this isn't very efficient we need to use http and https using the default port (80 and 443). This means we have to **Know every target port we define** which isn't user friendly plus it's not scalable. Second problem is some of our apps might need a secure connection using https which means we need somewhere to store our SSL certificate.
+
+### Responsibilities 
+The ingress takes cares of SSL certificate maintenance. Plus the ingress acts as our cluster **gateway** or **load balancer** all incoming requests could go through it and given certain **URL prefixes** it can determine which service is should forward the request too.
+
+### Types
+K8 by default doesn't not provide an ingress controller like the replica set controller, deployments controller and so on. But it provides an API to create one but usually you won't need to create one manually there are different ingress controllers maintained by the community and different ones for each cloud provider you might be using (GCP, AWS, AZURE) the one used in the example is base on the google. We will be using the **nginx** **ingress**, you can find all the configuration for it [here](https://github.com/kubernetes/ingress-nginx/blob/main/README.md). 
+
+### Ingress Creation
+After running the command `kubectl create -f ./k8-ingress.yaml` a request is sent to the **API server** to create a new ingress object, the ingress controller is listening to the API server events and sees there is a new ingress creation request. It configures the load balancer (can be nginx or HAproxy, etc in our case we used nginx) according to the yaml [file](./k8-ingress.yaml).
+
+### Multiple ingress creation
+We can create multiple ingress files each with it's own rules and k8 will take both configurations and apply them to our load balancer.
+
+### Ingress with default back-end
+Like we said we can create multiple ingress configurations in our cluster, we can also define an ingress with no **rules**, k8 will understand this is the default back-end to forward the request to when it doesn't match any of the previous rules, here is an example:
+
+```yaml
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: default
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  backend:
+    serviceName: devops-toolkit
+    servicePort: 80
+```
+
 ## References 
 A big thanks for educative for their amazing [course](https://www.educative.io/path/kubernetes-essentials) for k8.

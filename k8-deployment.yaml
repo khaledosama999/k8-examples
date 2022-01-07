@@ -51,7 +51,7 @@ metadata:
 spec:
   type: NodePort
   ports:
-  - port: 8080 # This defines the port that the request should be forwarded to (in out case the api is listening to port 8080)
+  - port: 8080 # This defines the port that the request should be forwarded to (in our case the api is listening to port 8080)
     targetPort: 8080 # The port used for other pods inside the same cluster to communicate with the pods associated to this service 
     nodePort: 30001 # This tells the service to accept incoming traffic on port 30001 but forwarded it to the pods 8080, this is not advised just let k8 handle assigning port to the service, it's just included for demonstration
     protocol: TCP # Default is TCP, allowed Values are UDP and TCP
