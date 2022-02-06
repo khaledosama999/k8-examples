@@ -127,6 +127,24 @@ spec:
     serviceName: devops-toolkit
     servicePort: 80
 ```
+## Volumes
 
+### Motivation 
+As we know a container might crash or the **pod** running it even might crash so if we for example had the logs saved **in a file** locally in that container as soon as it restarts or crashes the information is gone. So we need some where to save such data, k8 **volumes** are used to for such cases, volumes can also be used to read data from the host node that is running the pods.
+
+### Types 
+
+#### host path
+The `hostPath` creates a volume from the container **host** which in our case is the node running the pod, this isn't necessarily the best option to keep state, as we discussed pod might fail and crash or updated so this host path isn't the most common case for volume mounting.
+
+It has only two options **path** which is the path to the entity (more on that later) that will be available through this volume. 
+
+and **type** which indicates the type of entity the volume will map to could be a file, directory socket, char device or block device, in our case (k8-pod-with-volumes.yaml) we used socket since we ran a container that needed access to the docker server, so we created a volume to mount the socket (on the host a.k.a the node) so our docker container can communicate with the docker server on the node running the pod.
+
+#### Git repo
+There is also another type that mounts a directory to a **github repo** directly it doesn't add much value as maybe as part of our image creation can have a `git clone` but it seems more declarative and let's you rely less on ambiguous commands
+
+#### Empty directory 
+This type create an empty volume on the node on which the pod resides it will continue to exist **as long as the pod keeps running on the same node** if the container mounting the volume fails and k8 has to recreate it, the volume will keep the old data that was written to it if any. Once the pod is destroyed or fails the volume goes with it.
 ## References 
 A big thanks for educative for their amazing [course](https://www.educative.io/path/kubernetes-essentials) for k8.

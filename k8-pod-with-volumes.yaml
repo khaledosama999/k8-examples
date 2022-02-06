@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: docker
+spec: # Creating a pod that runs a container with the docker image, the problem is the image only runs the docker client not the server so we need to connect the container to the **host** docker server through volumes
+  containers:
+  - name: docker
+    image: docker:17.11
+    volumeMounts: # Define volume mountes for this container 
+    - mountPath: /var/run/docker.sock # The path inside the container that should be mapped to the mounted volume
+      name: docker-socket # Tha name of the volume 
+    - mountPath: /var/empty-dir
+      name: empty-dir
+  volumes: 
+  - name: docker-socket # Name given to the volume that should be used by the containers 
+    hostPath:
+      path: /var/run/docker.sock # The path to the directory on the host that any container that will mount this volume will be able to access
+      type: Socket # The type of the mount (socket, directory, file...)
+  - emptyDir: {} # an empty volume that persists on the pod, so when ever this container fails this volume will stay alive for the next container that mounts it
+      name: empty-dir
+    
