@@ -146,5 +146,115 @@ There is also another type that mounts a directory to a **github repo** directly
 
 #### Empty directory 
 This type create an empty volume on the node on which the pod resides it will continue to exist **as long as the pod keeps running on the same node** if the container mounting the volume fails and k8 has to recreate it, the volume will keep the old data that was written to it if any. Once the pod is destroyed or fails the volume goes with it.
+#### Advanced types
+there are other volumes types like **config maps** but it will have it's own section.
+
+## ConfigMaps
+
+### Motivation
+Usually our apps need some kind of **configuration** to run for a back-end server for example that might be the port to listen for incoming requests on, the database connections and so on..., it's a very common practice to inject those values as **env** **variables** as sometimes we might deploy the same application in different environments (development, staging and production). This is where **config** **maps** come into a play by allowing us to **inject** configurations into our containers
+
+### Different types of configurations maps
+
+#### From files
+One way to create a configuration map is from a file, for instance you might need to run a container for prometheus and you have your configuration file ready on your local machine. using the command 
+```js
+kubectl create cm my-config \
+    --from-file=cm/prometheus-conf.yml
+```
+ Using the `from-file` option allows you to create a config object on your cluster from the given file.
+ #### From key/value literal
+ Another way is to explicitly define your configuration using key value pairs, which might be suitable for small configurations
+ ```js
+ kubectl create cm my-config \
+    --from-literal=something=else \
+    --from-literal=weather=sunny
+ ```
+This will create a config object with two keys  (something=else, weather=sunny) named `my-config`
+
+#### From env file
+A pretty common practice is to have your env variables defined in a file like so,
+```js
+something=else
+weather=sunny
+```
+From the given file we can create a config object in a similar way we created one from a normal file
+```js
+kubectl create cm my-config \
+    --from-env-file=cm/my-env-file.yml
+```
+The main difference between from env file is an env value has to follow a certain format which is known for env files (key value pairs) unlike the normal file which can be anything
+
+### Mounting config maps
+Now that we now how to make config objects in different ways we need to **connect** them somehow to our running container inside our pods
+
+#### Mounting as a volume
+One way is to update the spec of the pod to add a volume from the config map object and mount it like so 
+```js
+ spec:
+  containers:
+  - name: alpine
+    image: alpine
+    command: ["sleep"]
+    args: ["100000"]
+    volumeMounts:
+    - name: config-vol
+      mountPath: /etc/config
+  volumes:
+  - name: config-vol
+    configMap:
+      name: my-config
+```
+
+In the volumes section we define our volume which is created from our previously created config object. Then in the volume mount section we mount that volume and give it the path 
+
+#### Defining env variables 
+Another way is to define the needed env variables for our pods in the spec section and **fetch** their values from a predefined config object,
+```js
+apiVersion: v1
+kind: Pod
+metadata:
+  name: alpine-env
+spec:
+  containers:
+  - name: alpine
+    image: alpine
+    command: ["sleep"]
+    args: ["100000"]
+    env:
+    - name: something
+      valueFrom:
+        configMapKeyRef:
+          name: my-config
+          key: something
+    - name: weather
+      valueFrom:
+        configMapKeyRef:
+          name: my-config
+          key: weather
+```
+We added a new **env** section which defines the needed env variables for our container, each env variable has name and we fetch it's value from a pre defined config object and since the config file has more than one variable we need to define which one we need.
+
+### Using a config map YAML file
+As with everything in k8 we usually can create it from a YAML file, this applies also to the config map 
+#### Defining the whole config object
+We can as well take the whole config object as is and have all it's defined variables being read in our pod spec,
+```js
+apiVersion: v1
+kind: Pod
+metadata:
+  name: alpine-env
+spec:
+  containers:
+  - name: alpine
+    image: alpine
+    command: ["sleep"]
+    args: ["100000"]
+    envFrom:
+    - configMapRef:
+        name: my-config
+```
+Using the **envFrom** we can read all the env variables from our config object and add them to our pod spec the difference between this and the `env.name` is you don't have to add each env variable manually like [so](./k8-config-map.yaml) by typing the command `kubectl create cm ./k8-config-map.yaml`
+
 ## References 
 A big thanks for educative for their amazing [course](https://www.educative.io/path/kubernetes-essentials) for k8.

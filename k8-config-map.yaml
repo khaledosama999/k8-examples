@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap 
+metadata:
+  name: my-config
+data: # Data of key value pairs to indicate the configuration for this config map object 
+  something: else
+  weather: sunny
