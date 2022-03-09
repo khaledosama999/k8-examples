@@ -154,7 +154,7 @@ there are other volumes types like **config maps** but it will have it's own sec
 ### Motivation
 Usually our apps need some kind of **configuration** to run for a back-end server for example that might be the port to listen for incoming requests on, the database connections and so on..., it's a very common practice to inject those values as **env** **variables** as sometimes we might deploy the same application in different environments (development, staging and production). This is where **config** **maps** come into a play by allowing us to **inject** configurations into our containers
 
-### Different types of configurations maps
+### Different ways of creating configurations maps
 
 #### From files
 One way to create a configuration map is from a file, for instance you might need to run a container for prometheus and you have your configuration file ready on your local machine. using the command 
@@ -255,6 +255,98 @@ spec:
         name: my-config
 ```
 Using the **envFrom** we can read all the env variables from our config object and add them to our pod spec the difference between this and the `env.name` is you don't have to add each env variable manually like [so](./k8-config-map.yaml) by typing the command `kubectl create cm ./k8-config-map.yaml`
+
+## Secrets
+
+### Motivation
+Sometime we might need to save configurations but they are supposed to be hidden safely (like passwords, tokens...) since we can view the config map objects data if we have access to the cluster this isn't our best option, we can instead create secrets which are pretty much like config maps
+
+### Default secrets
+By default k8 creates a secret for all our containers that is used to communicate with the cluster **API** **server** you can view the secrets by typing the command `kubectl get secrets` you should find the default secret under the type 
+`kubernetes.io/service-account-token`
+
+### Types
+
+#### Docker registry 
+The first type is `docker-registry` which registers a secret that can be used by k8 to pull images from a private registry 
+
+#### tls
+`tls` type is used to store certificates
+
+#### Generic
+`generic` type is what resembles config map and is what we will be discussing 
+
+### Different ways of creating secrets
+
+#### From files
+One way to create a secrets is from a file
+```js
+kubectl create secret generic my-cred \
+    --from-file=cm/prometheus-conf.yml
+```
+ Using the `from-file` option allows you to create a config object on your cluster from the given file.
+ #### From key/value literal
+ Another way is to explicitly define your secrets using key value pairs
+ ```js
+ kubectl create secret generic my-cred \
+    --from-literal=something=else \
+    --from-literal=weather=sunny
+ ```
+This will create a secret object with two keys  (something=else, weather=sunny) named `my-config`
+
+#### From env file
+```js
+something=else
+weather=sunny
+```
+From the given file we can create a config object in a similar way we created one from a normal file
+```js
+kubectl create secret generic my-cred \
+    --from-env-file=cm/my-env-file.yml
+```
+
+### Keeping secrets a secret
+You will notice that we created secrets **the same way** we created config maps, so what is the difference ??. Let's assume we created a secrete from literal values like so 
+```js
+kubectl create secret \
+    generic my-creds \
+    --from-literal=username=jdoe \
+    --from-literal=password=incognito
+```
+This will create a secret object in our cluster which we can view using the following command
+```js
+kubectl get secret my-creds -o json
+```
+The output is should look something like so
+```js
+{
+    "apiVersion": "v1",
+    "data": {
+        "password": "aW5jb2duaXRv",
+        "username": "amRvZQ=="
+    },
+    "kind": "Secret",
+    "metadata": {
+        ...
+    },
+    "type": "Opaque"
+}
+```
+As you can tell we can view our secrets keys but we **can't view** the values are encoded
+
+### Mounting secrets
+Given that we create a secret with keys `username` and `password` we need ot mount it somehow into our containers
+by running the command `kubectl apply -f ./k8-secrets.yml` on [this file](./k8-secrets.yml), two new files are created by the name `jenkins-user` and `jenkins-password` in the `/etc/secrets` folder 
+
+## Comparison between config maps and secrets
+
+| - | Secrets | Config maps |
+|---|--- |---| 
+| Creation | From literal values, files and env files | From literal values, files and env files
+| Mounting | Can be mounted as a volume or read as env variables | Can be mounted as a volume or read as env variables
+|Persistance | Creates actual files on the host system | Saved as files in memory known as tmpfs (temporary file storage) |
+
+A quick note that secrets don't provide total security over config maps, we can still view the encoded values for the secrets from the terminal, but it's a step in the right direction.
 
 ## References 
 A big thanks for educative for their amazing [course](https://www.educative.io/path/kubernetes-essentials) for k8.
