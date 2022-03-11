@@ -348,5 +348,47 @@ by running the command `kubectl apply -f ./k8-secrets.yml` on [this file](./k8-s
 
 A quick note that secrets don't provide total security over config maps, we can still view the encoded values for the secrets from the terminal, but it's a step in the right direction.
 
+## Name spaces
+
+### Motivation 
+
+When developing apps we sometimes need different environments, a dev environment and a production environment and so on, or if we have micro services we might have different teams working on different services, so each team **can** **not** update (or view for that matter) anything apart from their services. A simple answer to all of the above is we create a k8 cluster for each environment or service, while that works managing multiple clusters will require more resources (CPU, memory...) plus it's a headache if the number of clusters get too big to keep up with and maintain. Name spaces allow us to have **virtual** **clusters** inside one k8 cluster by creating k8 objects inside a certain name space **only** other objects will be able to interact with it.
+
+### K8 Auto Created Name Spaces
+By default k8 has 3 namespaces, which you can view using the command `kubectl get ns` :
+
+- `default`
+- `kube-public`
+- `kube-system`
+
+#### default
+This is the default namespace where **user created objects** will reside so any pods, services, deployments etc we create **with out** specifying the name space will be created here
+
+#### kube-public
+
+This is the name space that will contain public object that will be available for **all** your namespace, this is a good place for objects that you might need regardless of what name space you are operating in, for example **config maps** can be created in this name space
+
+#### kube-system
+Is where k8 related objects lay like pods for `kube-dns` and the ingress controller. 
+
+#### Viewing name space related objects
+We can define the name space in our commands using the `--namespace` option, `kubectl --namespace kube-system get pods`
+
+### Creating a name space
+We can use the command `kubectl create ns testing` for creating a new name space named `testing`, then for every object we create we need to specify the namespace flag with value `testing` or we can create a new context which adds any new objects into the testing name space by default
+
+```js
+kubectl config set-context testing \
+    --namespace testing \
+    --cluster c1 \ # The name of our cluster
+    --user minikube # The name of the user for this context
+```
+and then type `kubectl config use-context testing`
+
+### Inter Name Space communication 
+Like we said by default containers can't communicate to each other if each one lies in a different name space but that's not entirely true.
+
+Let's say we have a pod labeled `app-1` in name space `ns-1` and we have another pod labeled `app-2` in name space `ns-2` and each has it's own `NodePort` service, usually if we needed to make a request to `app-2` if they were in the same namespace it would look something like this `https://app-2/apis/user` but since they are in different namespace we have to append the namespace as a suffix to the pod name `https://app-2.ns-2/apis/user`. 
+
 ## References 
 A big thanks for educative for their amazing [course](https://www.educative.io/path/kubernetes-essentials) for k8.
