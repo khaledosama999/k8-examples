@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod 
+metadata:
+  name: go-demo-2
+  labels:
+    type: stack 
+spec:  
+  containers:  
+  - name: db 
+    image: mongo:3.3
+    resources: # Definition for limiting resource allocation settings for this pod
+      limits: # The maximum resource settings this container is allowed 
+        memory: 200mi # The maximum memory allowed (200 mega bytes)
+        cpu: 0.5 # The maximum cpu cores/threads allowed 
+      requests: # The expected resource required to run this container
+        memory: 100mi 
+        cpu: 0.1

@@ -390,5 +390,68 @@ Like we said by default containers can't communicate to each other if each one l
 
 Let's say we have a pod labeled `app-1` in name space `ns-1` and we have another pod labeled `app-2` in name space `ns-2` and each has it's own `NodePort` service, usually if we needed to make a request to `app-2` if they were in the same namespace it would look something like this `https://app-2/apis/user` but since they are in different namespace we have to append the namespace as a suffix to the pod name `https://app-2.ns-2/apis/user`. 
 
+## Resources
+
+### Motivation
+Given that we now know how to create pods and scale them in different ways, what about managing their **resources**, how much memory and cpu each pod is allowed or even expected usage ??. By using resource definitions we can mitigate information to k8 about the expected resource usage and limits of a given pod.
+
+### Creating A Resources Limited Pod
+When typing `kubectl apply -f ./k8-resource-pod,yaml`  k8 will try and create this new pod and assign it to a node with **resources more than or equal to** the specified resources in the `request` section (200 megabytes of free memory). 
+
+If there isn't such a node that exists that can accommodate the total sum of the containers resources then the pod state will be **pending** until a node has the required amount of resources.
+
+#### Requests
+Memory requests can be assigned a value using kilo byte, mega bytes, giga byte and so on ...
+While one cpu unit might differ on where the cluster is deployed on virtual machine or bare-metal but we can view it as relative processing time, as in if one container has  `cpu` request value 2 and another container has request value 1, that means the first container will get double the processing time.
+
+### Passing Allowed Resources Limits
+So what happens if a certain container passes the memory `limit`?. The pod will be destroyed and the scheduler will try to redeploy it again on a node that has the free resources needed.
+
+When it passes the cpu limit it's a bit of different story, the pod doesn't get destroyed but it's gets throttled (less cpu time).
+
+### Resource Consumption
+We need an actual way of determining the resources (memory and cpu) allocation for each pod any numbers placed will almost be random, as we can not really tell the load in an actual production environment, we can stress test but still those won't be actual numbers.
+
+So we can begin by allocating resources a bit more than what we expect the pod to need and then **monitor** the pod using technologies like **prometheus** and **alert manager** to constantly monitor our resources at peak time and such, and have alerts set to when the pods come close to the defined limit so we can either re-adjust the limits or figure what the problem was (memory-leak, a cpu intensive task..)
+
+### Quality Of Service
+Now that we created our pods with resource limitations there is still a possibility of having the total sum of required resources **surpass** the total resources available on the node (we might have a node with 1GB of memory and three pods each with maximum allowed memory of 500 megabyte so total is 1.5 gb). Then the pod will have kill some of the pod(s). This isn't by any means random, it's done according to the **quality of service class**  assigned to the pod 
+
+#### Guaranteed Quality Of Service
+A pod has guaranteed quality of service only if:
+- The limit for memory is set
+- The limit for cpu is set
+- The request for memory and cpu **equals** the limit
+
+This means the pod will get guaranteed Quality of service class. (If we don't set the request it's set automatically with values equal to the limit).
+
+#### Burstable Quality Of Service
+A pod has Busrtable quality of service if it doesn't meet the requirements for guaranteed quality of service and has a request for either memory or cpu.
+
+#### Best Effort Quality Of Service
+A pod that doesn't meet the requirements for Guaranteed or burstable quality of service is considered best effort and can use any available resources if needed.
+
+Usually when there is contention over resources, k8 gets rid off best effort first (lowest priority), if there isn't any best effort it moves on too burstable then guaranteed (highest priority).
+
+### Namespace resources
+
+### Motivation
+That's all good but someone might just create a pod with a very large amount of memory and cpu time. so it will hog all the node resources. we might need to set some limits and guidelines for defining maximum and minium allowed resources.
+
+### Creating Namespace Resource Defaults And Limits
+
+If we type the command `kubectl --namespace test create \
+    -f ./k8-namespace-resources.yaml \
+    --save-config --record`
+The new limit object will be created for the `test` namespace so any pods created in that namespace will have to commit by those rules.
+
+### Resource Quotas
+
+### Motivation
+Now that we set rules for the resource limitation we still have a small problem, users might stick to the defined rules per pod but they can still create hundreds and hundreds of pod which will hog down our cluster and cause contention for resources. So we need ot define **resource quotas** to limit the overall resource usage per namespace. 
+
+After running the command `kubectl create \
+    -f ./k8-namespace-resource-quotas.yaml \
+    --record --save-config` The resource quota for the specified namespace, The summation of required pods belonging to that namespace cannot exceed the defined limits.
 ## References 
 A big thanks for educative for their amazing [course](https://www.educative.io/path/kubernetes-essentials) for k8.

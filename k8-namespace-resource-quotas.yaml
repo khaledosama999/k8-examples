@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: dev # Tags to be used in which name space
+  namespace: dev # Tags to be used in which name space
+spec: # The limits of resources for the given name space
+  hard:
+    requests.cpu: 0.8 # The total sum of cpu requests can't exceed 0.8
+    requests.memory: 500Mi # The total sum of request for memory can't exceed 500 mega bytes
+    limits.cpu: 1 # The total sum of limits for cpu can't exceed 1
+    limits.memory: 1Gi # The total sum of limits for memory can't exceed 1 giga byte
+    pods: 10 # The total number of pods in the namespace can't exceed 10
