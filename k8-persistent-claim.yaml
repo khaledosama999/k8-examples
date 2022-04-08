@@ -1,0 +1,12 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: jenkins
+  namespace: jenkins
+spec:
+  storageClassName: manual-ebs # The class name that must match the class name of the in the persistent volume file
+  accessModes:
+    - ReadWriteOnce # The access mode, must match the persistent volume access mode
+  resources:
+    requests:
+      storage: 1Gi # The storage request must be equal to or smaller than the specified persistent volume

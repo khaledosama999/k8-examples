@@ -1,0 +1,15 @@
+kind: PersistentVolume 
+apiVersion: v1
+metadata:
+  name: manual-ebs-01
+  labels:
+    type: ebs
+spec:
+  storageClassName: manual-ebs # The class name used in the persistent volume claim
+  capacity:
+    storage: 5Gi # Defines the capacity of the persistance volume this should be equal to or less than the file system you are mounting 
+  accessModes:
+    - ReadWriteOnce # The access mode This mode defines that only one pod at any given time can use the persistence volume
+  awsElasticBlockStore: # The type of file system the persistent volume will map to in our case we are using aws EBS
+    volumeID: <EBS_ID> # This should be replaced with the EBS id 
+    fsType: ext4

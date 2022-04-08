@@ -1,0 +1,10 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: fast
+  labels:
+    type: ebs
+provisioner: kubernetes.io/aws-ebs # This is dependant on the type of file system you are trying to create in our case we are trying to create EBS of type io1 on aws
+parameters:
+  type: io1 # The type of file system you are trying to create, in our case that's io1 # https://aws.amazon.com/ebs/details/ 
+reclaimPolicy: Delete

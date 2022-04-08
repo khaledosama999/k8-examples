@@ -453,5 +453,62 @@ Now that we set rules for the resource limitation we still have a small problem,
 After running the command `kubectl create \
     -f ./k8-namespace-resource-quotas.yaml \
     --record --save-config` The resource quota for the specified namespace, The summation of required pods belonging to that namespace cannot exceed the defined limits.
+
+## Persistent Volumes
+
+### Motivation
+As we discovered we can mount volumes inside our containers to be able to read data from file system, repos..., the highest level of durability we reached was mounting a local file/directory on the node so if the container fails and restarts the data still persists on the node, but **if the node fails** we lose all our data which isn't desirable in some case (hosting a db on your cluster needs a durable place to write and save the data).
+
+**Persistent volumes** can solve the above problem by providing a mountable file system that is guaranteed to be durable
+
+### Creating Persistent Volumes
+
+Persistent volume act as a bridge between k8 and the actual file system we want to access so usually we can create a cloud provider specific file system and have a persistent volume that points to it. The common types of file systems are:
+- `EBS` and `EFS` for amazon
+- `azureDisk` or `azureFile` for microsoft
+- `GCEPersistentDisk` for GCP
+- If for some reason you are running the k8 cluster on-prem data center we can use `nfs`
+
+In our example we will use the `EBS` for our file system option.
+
+checkout the [persistent volume yaml](k8-persistent-volumes.yaml)
+
+### Access modes
+We have multiple mode for accessing our file system:
+- `ReadWriteOnce`: Only one pod is allowed to use the file system at any given time/
+- `ReadOnlyMany`: Any number of given pods might use the file system as read only.
+- `ReadWriteMany`: Any number of given pods might use the file system for reading and write. 
+
+### Persistent Volume Claim
+The Persistent volume alone is useless, we only defined the resource we need a way to be able to **claim it**.
+
+By creating a [persistent volume claim](k8-persistent-claim.yaml).
+
+Using the persistent volume claim the scheduler tries to find a matching persistent volume (using the storage class name and storage request) if it does the state of the claim and persistent volume will change to **bound** as in someone is using that volume. If it doesn't the status for the claim will be unbound until a volume is created that matches the specified class name and storage requests.
+
+### Mounting Persistent Volume To Pod
+Now that we have our persistent volume definition and claim definition we need to be able to use them in our [pod definition](k8-persistent-volume-pod.yaml).
+
+### Deleting Persistent Volume Claims
+If we delete our pod and the persistent volume claim objects, the persistent volume remains in **retain** policy. Which is one of two policies:
+
+- `retain`: The volume needs to be cleared and have all the previous data written on it to be deleted before it can be used again by another pod.
+- `Delete`: When a claim for a persistent volume is removed the underlying file system is removed as well (in our case the EBS is removed).
+### Dynamic Volumes Provisioning  
+What we have just done is called manual volume provisioning, where we first created the EBS on aws then we created a persistent volume with 10Gi and a claim corresponding to it and then a pod mounted that claim, if another pod comes along that needs some kind of persistent volumes we have to go through the whole process **manually**.
+
+Using the storage classes `storage.k8s.io` we can define storage classes that can be used by persistent claims to dynamically create file system.
+
+Depending on the cloud provider or if you are running an on-prem cluster you define the type of file system. in our [storage class](./k8-persistent-volume-storage-class.yaml) our **provisioner** which is responsible for creating the needed file system is `kubernetes.io/aws-ebs` and the file system type is io1 since we want to create a EBS of type io1 on aws. And the reclaim type is `delete` so when the claim is gone the file system is removed.
+
+We just need to create a claim using the same storage class name and a pod using that claim, this is the sequential breakdown of the process:
+- We create a pod that mounts the persistent volume claim 
+- The claim requests a persistent volume of the same storage class
+- our storage class object talks to the aws API to create a file system EBS of type io1
+- The EBS volume is mounted on our pod
+
+And if the pod is removed the EBS volume will be deleted as well, since our reclaim policy is delete.
+
+You can check out the 
 ## References 
 A big thanks for educative for their amazing [course](https://www.educative.io/path/kubernetes-essentials) for k8.

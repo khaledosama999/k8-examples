@@ -1,0 +1,23 @@
+...
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins
+  namespace: jenkins
+spec:
+  ...
+  template:
+    ...
+    spec:
+      containers:
+      - name: jenkins
+        ...
+        volumeMounts:
+        - name: jenkins-home
+          mountPath: /var/jenkins_home
+        ...
+      volumes:
+      - name: jenkins-home 
+        persistentVolumeClaim: # Volume type claim 
+          claimName: jenkins # The name of the persistent volume claim
+      ...
